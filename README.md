@@ -1,6 +1,6 @@
-# KeyDrop
+# Qword
 
-KeyDrop is a lightweight keyword-based link directory built for collecting, searching, and opening curated links from one clean interface. It uses a React frontend with Supabase as the backend, making it easy to browse the latest collections or search for a specific keyword instantly.
+Qword is a lightweight keyword-based link directory built for collecting, searching, and opening curated links from one clean interface. It uses a React frontend with Supabase as the backend, making it easy to browse the latest collections or search for a specific keyword instantly.
 
 This project was created using the AI coding agent Codex.
 
