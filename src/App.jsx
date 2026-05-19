@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
+import { FaFacebookF, FaInstagram, FaXTwitter, FaGithub } from 'react-icons/fa6'
+// Import needed icons
 import { fetchLatestCollections, searchCollections } from './lib/supabase'
 import {
   MAX_SEARCH_LENGTH,
@@ -9,6 +11,30 @@ import {
 } from './lib/search'
 
 const isAbortError = (error) => error?.name === 'AbortError'
+const GITHUB_REPO_URL = 'https://github.com/muhmdfayasek/QeyDrop'
+const SOCIAL_LINKS = [
+  {
+    label: 'Instagram',
+    href: 'https://www.instagram.com/muhmdfayasek',
+    icon: FaInstagram,
+  },
+  {
+    label: 'Facebook',
+    href: 'https://www.facebook.com/muhmdfayasekcc',
+    icon: FaFacebookF,
+  },
+  {
+    label: 'X',
+    href: 'https://x.com/muhmdfayasek',
+    icon: FaXTwitter,
+  },
+  {
+    label: 'Github',
+    href: 'https://www.github.com/muhmdfayasek',
+    icon: FaGithub,
+  },
+  // Add other links here
+]
 
 function App() {
   const [query, setQuery] = useState('')
@@ -140,7 +166,7 @@ function App() {
 
   return (
     <main className="min-h-screen bg-[var(--app-bg)] text-[var(--app-text)]">
-      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 pb-32 pt-10 sm:px-6 sm:pb-36 lg:px-8">
         <section className="relative overflow-hidden rounded-[2rem] border border-[var(--border-soft)] bg-[var(--surface-strong)] px-5 py-6 shadow-glow sm:px-8 sm:py-8">
           <div className="pointer-events-none absolute inset-0 hero-glow" />
           <div className="relative space-y-5">
@@ -207,7 +233,7 @@ function App() {
               <p className="mt-2 text-sm text-[var(--text-muted)]">
                 {isSearchingView
                   ? 'Try a shorter keyword or clear the search to see the latest entries.'
-                  : 'Add a few collections in Supabase and they will appear here.'}
+                  : 'Source is empty'}
               </p>
             </div>
           ) : null}
@@ -249,7 +275,39 @@ function App() {
             ))}
           </div>
         </section>
+
+        <footer className="mt-auto pt-12 text-center text-xs text-[var(--text-muted)] sm:pt-14">
+          <a
+            href={GITHUB_REPO_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center justify-center transition hover:text-[var(--app-text)]"
+          >
+            View Source
+          </a>
+          <p className="mt-2">Made with love ❤️</p>
+        </footer>
       </div>
+
+      <nav
+        aria-label="Social links"
+        className="dock-shell fixed left-1/2 z-20 w-[calc(100%-1.5rem)] max-w-max -translate-x-1/2"
+      >
+        <div className="dock-glass flex items-center justify-center gap-1 rounded-full border border-[var(--dock-border)] px-2 py-2 sm:gap-2 sm:px-3">
+          {SOCIAL_LINKS.map(({ label, href, icon: Icon }) => (
+            <a
+              key={label}
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Open ${label}`}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-[var(--text-muted)] opacity-80 transition duration-200 hover:scale-[1.04] hover:opacity-100 hover:text-[var(--app-text)] sm:h-11 sm:w-11"
+            >
+              <Icon className="h-[18px] w-[18px] sm:h-5 sm:w-5" />
+            </a>
+          ))}
+        </div>
+      </nav>
     </main>
   )
 }

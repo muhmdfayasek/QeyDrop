@@ -16,6 +16,9 @@
   --bg-glow-bottom: rgba(244, 114, 182, 0.18);
   --hero-glow-top: rgba(56, 189, 248, 0.18);
   --hero-glow-bottom: rgba(244, 114, 182, 0.16);
+  --dock-surface: rgba(214, 220, 231, 0.62);
+  --dock-border: rgba(116, 129, 150, 0.22);
+  --dock-shadow: rgba(15, 23, 42, 0.2);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -33,6 +36,9 @@
     --bg-glow-bottom: rgba(244, 63, 94, 0.08);
     --hero-glow-top: rgba(245, 158, 11, 0.12);
     --hero-glow-bottom: rgba(244, 63, 94, 0.1);
+    --dock-surface: rgba(34, 36, 42, 0.72);
+    --dock-border: rgba(255, 255, 255, 0.08);
+    --dock-shadow: rgba(0, 0, 0, 0.28);
   }
 }
 
@@ -65,6 +71,16 @@ a {
   background:
     radial-gradient(circle at top left, var(--hero-glow-top), transparent 38%),
     radial-gradient(circle at bottom right, var(--hero-glow-bottom), transparent 34%);
+}
+
+.dock-shell {
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+}
+
+.dock-glass {
+  background: var(--dock-surface);
+  backdrop-filter: blur(18px);
+  box-shadow: 0 12px 32px -24px var(--dock-shadow);
 }
 
 * {
