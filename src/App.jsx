@@ -96,7 +96,7 @@ function App() {
           <div className="relative space-y-5">
             <div className="space-y-3">
               <p className="text-xs font-medium uppercase tracking-[0.32em] text-[var(--text-muted)]">
-                Qword Link Directory
+                QeyDrop Link Directory
               </p>
               <div className="space-y-2">
                 <h1 className="max-w-2xl text-3xl font-semibold tracking-tight sm:text-5xl">

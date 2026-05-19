@@ -1,8 +1,8 @@
-# Qword
+# QeyDrop
 
-<img src="public/favicon.svg" alt="Qword Logo" width="80" height="80" />
+<img src="public/favicon.svg" alt="QeyDrop Logo" width="80" height="80" />
 
-Qword is a lightweight keyword-based link directory built for collecting, searching, and opening curated links from one clean interface. It uses a React frontend with Supabase as the backend, making it easy to browse the latest collections or search for a specific keyword instantly.
+QeyDrop is a lightweight keyword-based link directory built for collecting, searching, and opening curated links from one clean interface. It uses a React frontend with Supabase as the backend, making it easy to browse the latest collections or search for a specific keyword instantly.
 
 This project was created using the AI coding agent Codex.
 
@@ -62,7 +62,7 @@ pnpm run build
 
 ## Analytics
 
-Qword includes **Vercel Analytics** for tracking user interactions and gathering insights about how the application is being used. This helps optimize the user experience and understand feature usage patterns. Analytics data is collected automatically and does not impact performance.
+QeyDrop includes **Vercel Analytics** for tracking user interactions and gathering insights about how the application is being used. This helps optimize the user experience and understand feature usage patterns. Analytics data is collected automatically and does not impact performance.
 
 ## Deployment
 
