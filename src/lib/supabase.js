@@ -1,4 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
+import {
+  LATEST_COLLECTION_LIMIT,
+  SEARCH_RESULT_LIMIT,
+  escapeIlikeValue,
+  validateSearchQuery,
+} from './search'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -21,16 +27,20 @@ const baseCollectionQuery = () =>
         created_at,
         links (
           id,
+          collection_id,
           label,
           url
         )
       `,
     )
 
-export const fetchLatestCollections = async () => {
-  const { data, error } = await baseCollectionQuery()
+export const fetchLatestCollections = async ({ signal } = {}) => {
+  const query = baseCollectionQuery()
+  query.abortSignal?.(signal)
+
+  const { data, error } = await query
     .order('created_at', { ascending: false })
-    .limit(10)
+    .limit(LATEST_COLLECTION_LIMIT)
 
   if (error) {
     throw error
@@ -39,16 +49,20 @@ export const fetchLatestCollections = async () => {
   return data ?? []
 }
 
-export const searchCollections = async (keyword) => {
-  const normalizedKeyword = keyword.trim()
+export const searchCollections = async (keyword, { signal } = {}) => {
+  const validatedQuery = validateSearchQuery(keyword)
 
-  if (!normalizedKeyword) {
+  if (validatedQuery.status !== 'valid') {
     return []
   }
 
-  const { data, error } = await baseCollectionQuery()
-    .ilike('keyword', `%${normalizedKeyword}%`)
+  const query = baseCollectionQuery()
+  query.abortSignal?.(signal)
+
+  const { data, error } = await query
+    .ilike('keyword', `%${escapeIlikeValue(validatedQuery.value)}%`)
     .order('created_at', { ascending: false })
+    .limit(SEARCH_RESULT_LIMIT)
 
   if (error) {
     throw error

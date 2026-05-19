@@ -1,7 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { fetchLatestCollections, searchCollections } from './lib/supabase'
+import {
+  MAX_SEARCH_LENGTH,
+  MIN_SEARCH_LENGTH,
+  SEARCH_DEBOUNCE_MS,
+  sanitizeSearchInput,
+  validateSearchQuery,
+} from './lib/search'
 
-const SEARCH_DEBOUNCE_MS = 250
+const isAbortError = (error) => error?.name === 'AbortError'
 
 function App() {
   const [query, setQuery] = useState('')
@@ -9,29 +16,43 @@ function App() {
   const [searchResults, setSearchResults] = useState([])
   const [loading, setLoading] = useState(true)
   const [searching, setSearching] = useState(false)
-  const [error, setError] = useState('')
+  const [loadError, setLoadError] = useState('')
+  const [searchError, setSearchError] = useState('')
+  const [validationMessage, setValidationMessage] = useState('')
   const searchCacheRef = useRef({})
+  const activeSearchRequestRef = useRef(0)
+  const validatedQuery = validateSearchQuery(query)
+  const isSearchingView = validatedQuery.status === 'valid'
+  const displayedCollections = isSearchingView ? searchResults : latestCollections
+  const helperMessage =
+    validationMessage ||
+    (validatedQuery.status === 'too-short'
+      ? `Type at least ${MIN_SEARCH_LENGTH} characters to search.`
+      : '')
+  const visibleError = isSearchingView ? searchError : loadError
 
   useEffect(() => {
     let isActive = true
+    const abortController = new AbortController()
 
     const loadLatestCollections = async () => {
       setLoading(true)
-      setError('')
+      setLoadError('')
 
       try {
-        const data = await fetchLatestCollections()
+        const data = await fetchLatestCollections({ signal: abortController.signal })
         if (!isActive) {
           return
         }
 
         setLatestCollections(data)
       } catch (fetchError) {
-        if (!isActive) {
+        if (!isActive || isAbortError(fetchError)) {
           return
         }
 
-        setError(fetchError.message || 'Unable to load collections.')
+        console.error('Failed to load latest collections.', fetchError)
+        setLoadError('Unable to load collections right now.')
       } finally {
         if (isActive) {
           setLoading(false)
@@ -43,50 +64,79 @@ function App() {
 
     return () => {
       isActive = false
+      abortController.abort()
     }
   }, [])
 
   useEffect(() => {
-    const normalizedQuery = query.trim()
+    activeSearchRequestRef.current += 1
+    const requestId = activeSearchRequestRef.current
 
-    if (!normalizedQuery) {
-      setSearchResults([])
-      setSearching(false)
+    if (validatedQuery.status !== 'valid') {
       return undefined
     }
 
-    const cacheKey = normalizedQuery.toLowerCase()
+    const cacheKey = validatedQuery.value.toLowerCase()
+    const abortController = new AbortController()
+
     const timer = window.setTimeout(async () => {
       if (searchCacheRef.current[cacheKey]) {
+        if (requestId !== activeSearchRequestRef.current) {
+          return
+        }
+
         setSearchResults(searchCacheRef.current[cacheKey])
         setSearching(false)
         return
       }
 
       setSearching(true)
-      setError('')
+      setSearchError('')
 
       try {
-        const data = await searchCollections(normalizedQuery)
+        const data = await searchCollections(validatedQuery.value, {
+          signal: abortController.signal,
+        })
+        if (requestId !== activeSearchRequestRef.current) {
+          return
+        }
+
         searchCacheRef.current[cacheKey] = data
         setSearchResults(data)
       } catch (searchError) {
-        setError(searchError.message || 'Search failed.')
+        if (requestId !== activeSearchRequestRef.current || isAbortError(searchError)) {
+          return
+        }
+
+        console.error('Search request failed.', searchError)
+        setSearchError('Unable to search right now.')
       } finally {
-        setSearching(false)
+        if (requestId === activeSearchRequestRef.current) {
+          setSearching(false)
+        }
       }
     }, SEARCH_DEBOUNCE_MS)
 
     return () => {
       window.clearTimeout(timer)
+      abortController.abort()
     }
-  }, [query])
+  }, [validatedQuery.status, validatedQuery.value])
 
-  const isSearchingView = query.trim().length > 0
-  const displayedCollections = useMemo(
-    () => (isSearchingView ? searchResults : latestCollections),
-    [isSearchingView, latestCollections, searchResults],
-  )
+  const handleQueryChange = (event) => {
+    const nextValue = event.target.value
+    const sanitizedValue = sanitizeSearchInput(nextValue)
+    const nextValidatedQuery = validateSearchQuery(sanitizedValue)
+
+    setQuery(sanitizedValue)
+    setSearchError('')
+    setValidationMessage(nextValue === sanitizedValue ? '' : 'Invalid search.')
+
+    if (sanitizedValue !== query) {
+      setSearching(nextValidatedQuery.status === 'valid')
+      setSearchResults([])
+    }
+  }
 
   return (
     <main className="min-h-screen bg-[var(--app-bg)] text-[var(--app-text)]">
@@ -113,11 +163,22 @@ function App() {
               <input
                 type="search"
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={handleQueryChange}
                 placeholder="Search keyword..."
+                maxLength={MAX_SEARCH_LENGTH}
                 className="w-full rounded-2xl border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-3 text-base text-[var(--app-text)] outline-none transition placeholder:text-[var(--text-muted)] focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--ring)]"
               />
             </label>
+
+            {helperMessage ? (
+              <p
+                className={`text-sm ${
+                  validationMessage ? 'text-red-200' : 'text-[var(--text-muted)]'
+                }`}
+              >
+                {helperMessage}
+              </p>
+            ) : null}
 
             <div className="flex flex-wrap items-center gap-3 text-sm text-[var(--text-muted)]">
               <span>{isSearchingView ? 'Matching keywords' : 'Latest 10 keywords'}</span>
@@ -132,13 +193,13 @@ function App() {
         </section>
 
         <section className="mt-8">
-          {error ? (
+          {visibleError ? (
             <div className="rounded-3xl border border-red-400/40 bg-red-500/10 px-5 py-4 text-sm text-red-200">
-              {error}
+              {visibleError}
             </div>
           ) : null}
 
-          {!error && !loading && displayedCollections.length === 0 ? (
+          {!visibleError && !loading && !searching && displayedCollections.length === 0 ? (
             <div className="rounded-3xl border border-[var(--border-soft)] bg-[var(--surface)] px-5 py-8 text-center shadow-glow">
               <p className="text-lg font-medium">
                 {isSearchingView ? 'No matching keywords found.' : 'No collections available yet.'}

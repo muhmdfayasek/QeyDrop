@@ -52,14 +52,16 @@ grant select on public.collections to anon;
 grant select on public.links to anon;
 
 drop policy if exists "anon can read collections" on public.collections;
-create policy "anon can read collections"
+drop policy if exists "Allow public read collections" on public.collections;
+create policy "Allow public read collections"
   on public.collections
   for select
   to anon
   using (true);
 
 drop policy if exists "anon can read links" on public.links;
-create policy "anon can read links"
+drop policy if exists "Allow public read links" on public.links;
+create policy "Allow public read links"
   on public.links
   for select
   to anon
