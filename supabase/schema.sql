@@ -300,3 +300,5 @@ begin
   end if;
 end
 $$;
+
+-- select public.configure_admin_account('admin@example.com');
