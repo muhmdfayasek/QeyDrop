@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useState } from 'react'
+import { FaEye, FaEyeSlash } from 'react-icons/fa6'
 import {
   deleteCollection,
   fetchAdminCollections,
@@ -59,6 +60,7 @@ function AdminPage() {
   const [authError, setAuthError] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [collections, setCollections] = useState([])
   const [dataLoading, setDataLoading] = useState(false)
   const [dataError, setDataError] = useState('')
@@ -202,6 +204,7 @@ function AdminPage() {
     try {
       await signInAsAdmin(email, password)
       setPassword('')
+      setShowPassword(false)
     } catch (error) {
       console.error('Sign in failed.', error)
       setAuthError('Unable to sign in. Check your credentials and try again.')
@@ -215,6 +218,7 @@ function AdminPage() {
     setNotice('')
     setSaveError('')
     setInlineError('')
+    setShowPassword(false)
 
     try {
       await signOutAdmin()
@@ -455,14 +459,25 @@ function AdminPage() {
                 <span className="mb-1.5 block text-xs font-medium uppercase tracking-[0.2em] text-[var(--text-muted)]">
                   Password
                 </span>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  autoComplete="current-password"
-                  placeholder="Password"
-                  className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-strong)] px-3 py-2.5 text-sm outline-none transition focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--ring)]"
-                />
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    autoComplete="current-password"
+                    placeholder="Password"
+                    className="w-full rounded-xl border border-[var(--border-soft)] bg-[var(--surface-strong)] px-3 py-2.5 pr-10 text-sm outline-none transition focus:border-[var(--border-strong)] focus:ring-2 focus:ring-[var(--ring)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((value) => !value)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    aria-pressed={showPassword}
+                    className="absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center justify-center rounded-full p-1.5 text-[var(--text-muted)] transition hover:text-[var(--app-text)]"
+                  >
+                    {showPassword ? <FaEyeSlash className="h-4 w-4" /> : <FaEye className="h-4 w-4" />}
+                  </button>
+                </div>
               </label>
 
               {authError ? (
