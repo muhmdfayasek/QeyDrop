@@ -44,9 +44,34 @@ pnpm dev
 
 ## Database Setup
 
-Run the SQL in [supabase/schema.sql](supabase/schema.sql) to create the required tables, indexes, and read-only access policies for public browsing.
+Run the SQL in [supabase/schema.sql](supabase/schema.sql) to create the required tables, indexes, admin helpers, and Row Level Security policies.
 
-The frontend uses the Supabase anon key only for `SELECT` queries. Row Level Security is enabled on both `collections` and `links`, and anonymous users are not granted write access.
+The public frontend uses the Supabase anon key for `SELECT` queries. Row Level Security is enabled on both `collections` and `links`, and writes are allowed only when the signed-in account matches the configured admin `auth.uid()` and stored admin email.
+
+## Admin Setup
+
+The `/admin` route is a real page, but it is not trusted for authorization. Database RLS is the actual protection.
+
+1. In the Supabase dashboard, disable public signup in Auth settings.
+2. Manually create the single admin user in Supabase Auth.
+3. Run [supabase/schema.sql](supabase/schema.sql).
+4. In the Supabase SQL editor, register that auth user as the only admin:
+
+```sql
+select public.configure_admin_account('admin@example.com');
+```
+
+After that:
+
+- `anon` and non-admin authenticated users can only `SELECT`.
+- Only the configured admin user can `INSERT`, `UPDATE`, or `DELETE`.
+- The frontend does not expose signup. The admin login accepts an entered email, then verifies the signed-in account against the admin email stored in the database.
+
+If admin login still shows that the account does not match, rerun the full [supabase/schema.sql](supabase/schema.sql) so the latest `is_admin_login_user` and `is_admin_user` function definitions are applied, then run:
+
+```sql
+select public.configure_admin_account('admin@example.com');
+```
 
 ## Sample Data
 
@@ -75,3 +100,5 @@ This project is optimized for deployment on **Vercel**, which provides:
 - Environment variable management
 
 To deploy on Vercel, simply connect your GitHub repository and Vercel will automatically build and deploy your application on every push.
+
+`vercel.json` includes an SPA rewrite for `/admin` so the admin page can be loaded directly.
