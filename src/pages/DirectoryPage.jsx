@@ -1,38 +1,83 @@
 import { useEffect, useRef, useState } from 'react'
-import { FaFacebookF, FaInstagram, FaXTwitter, FaGithub } from 'react-icons/fa6'
-import { fetchLatestCollections, searchCollections } from '../lib/supabase'
-import {
-  MAX_SEARCH_LENGTH,
-  MIN_SEARCH_LENGTH,
-  SEARCH_DEBOUNCE_MS,
-  sanitizeSearchInput,
-  validateSearchQuery,
-} from '../lib/search'
+import { FaCheck, FaRegCopy } from 'react-icons/fa6'
+import { fetchLatestCollections, searchCollections, supportsAdminPanel } from '../data/activeDataSource'
+import { SOCIAL_LINKS } from '../data/socialLinks'
+import { MAX_SEARCH_LENGTH, MIN_SEARCH_LENGTH, SEARCH_DEBOUNCE_MS, sanitizeSearchInput, validateSearchQuery } from '../lib/search'
 
 const isAbortError = (error) => error?.name === 'AbortError'
+const COPY_RESET_MS = 1600
+
+// Remove the below line if you don't want the repo link in your page
 const GITHUB_REPO_URL = 'https://github.com/muhmdfayasek/QeyDrop'
-const SOCIAL_LINKS = [
-  {
-    label: 'Instagram',
-    href: 'https://www.instagram.com/muhmdfayasek',
-    icon: FaInstagram,
-  },
-  {
-    label: 'Facebook',
-    href: 'https://www.facebook.com/muhmdfayasekcc',
-    icon: FaFacebookF,
-  },
-  {
-    label: 'X',
-    href: 'https://x.com/muhmdfayasek',
-    icon: FaXTwitter,
-  },
-  {
-    label: 'Github',
-    href: 'https://www.github.com/muhmdfayasek',
-    icon: FaGithub,
-  },
-]
+
+const formatCollectionCopyText = (collection) => {
+  const keyword = collection.keyword?.trim() ?? ''
+  const linkBlocks = (collection.links ?? [])
+    .map((link) => {
+      const label = link.label?.trim() ?? ''
+      const url = link.url?.trim() ?? ''
+
+      return [label, url].filter(Boolean).join('\n')
+    })
+    .filter(Boolean)
+
+  return [keyword, ...linkBlocks].filter(Boolean).join('\n\n')
+}
+
+const fallbackCopyText = (text) => {
+  if (typeof document === 'undefined') {
+    return false
+  }
+
+  const textarea = document.createElement('textarea')
+  textarea.value = text
+  textarea.setAttribute('readonly', '')
+  textarea.style.position = 'fixed'
+  textarea.style.top = '0'
+  textarea.style.left = '-9999px'
+  textarea.style.opacity = '0'
+  document.body.appendChild(textarea)
+
+  const selection = document.getSelection()
+  const existingRange = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null
+
+  textarea.focus()
+  textarea.select()
+  textarea.setSelectionRange(0, textarea.value.length)
+
+  let copied
+  try {
+    copied = document.execCommand('copy')
+  } catch {
+    copied = false
+  }
+
+  document.body.removeChild(textarea)
+
+  if (selection && existingRange) {
+    selection.removeAllRanges()
+    selection.addRange(existingRange)
+  }
+
+  return copied
+}
+
+const writeToClipboard = async (text) => {
+  if (!text) {
+    return false
+  }
+
+  try {
+    if (globalThis.navigator?.clipboard?.writeText) {
+      await globalThis.navigator.clipboard.writeText(text)
+      return true
+    }
+  } catch {
+    return fallbackCopyText(text)
+  }
+
+  return fallbackCopyText(text)
+}
 
 function DirectoryPage() {
   const [query, setQuery] = useState('')
@@ -43,8 +88,10 @@ function DirectoryPage() {
   const [loadError, setLoadError] = useState('')
   const [searchError, setSearchError] = useState('')
   const [validationMessage, setValidationMessage] = useState('')
+  const [copiedCollectionId, setCopiedCollectionId] = useState(null)
   const searchCacheRef = useRef({})
   const activeSearchRequestRef = useRef(0)
+  const copiedTimerRef = useRef(null)
   const validatedQuery = validateSearchQuery(query)
   const isSearchingView = validatedQuery.status === 'valid'
   const displayedCollections = isSearchingView ? searchResults : latestCollections
@@ -150,6 +197,15 @@ function DirectoryPage() {
     }
   }, [validatedQuery.status, validatedQuery.value])
 
+  useEffect(
+    () => () => {
+      if (copiedTimerRef.current) {
+        window.clearTimeout(copiedTimerRef.current)
+      }
+    },
+    [],
+  )
+
   const handleQueryChange = (event) => {
     const nextValue = event.target.value
     const sanitizedValue = sanitizeSearchInput(nextValue)
@@ -163,6 +219,24 @@ function DirectoryPage() {
       setSearching(nextValidatedQuery.status === 'valid')
       setSearchResults([])
     }
+  }
+
+  const handleCopyCard = async (collection) => {
+    const text = formatCollectionCopyText(collection)
+    const didCopy = await writeToClipboard(text)
+
+    if (!didCopy) {
+      return
+    }
+
+    if (copiedTimerRef.current) {
+      window.clearTimeout(copiedTimerRef.current)
+    }
+
+    setCopiedCollectionId(collection.id)
+    copiedTimerRef.current = window.setTimeout(() => {
+      setCopiedCollectionId(null)
+    }, COPY_RESET_MS)
   }
 
   return (
@@ -254,23 +328,39 @@ function DirectoryPage() {
                       {collection.keyword}
                     </h2>
                   </div>
+                  <button
+                    type="button"
+                    aria-label="Copy card content"
+                    onClick={() => handleCopyCard(collection)}
+                    className="inline-flex items-center gap-1 rounded-full border border-[var(--border-soft)] px-2 py-1 text-xs text-[var(--text-muted)] transition hover:border-[var(--border-strong)] hover:text-[var(--app-text)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
+                  >
+                    {copiedCollectionId === collection.id ? (
+                      <FaCheck className="h-3 w-3" aria-hidden="true" />
+                    ) : (
+                      <FaRegCopy className="h-3 w-3" aria-hidden="true" />
+                    )}
+                    <span>{copiedCollectionId === collection.id ? 'Copied' : 'Copy'}</span>
+                  </button>
                 </div>
 
-                <ul className="mt-5 space-y-3">
+                <ul className="mt-6 space-y-4">
                   {(collection.links ?? []).map((link) => (
                     <li
                       key={link.id}
-                      className="rounded-2xl border border-[var(--border-soft)] px-4 py-3"
+                      className="rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-strong)] px-4 py-3.5 transition hover:border-[var(--border-strong)]"
                     >
                       <a
                         href={link.url}
                         target="_blank"
                         rel="noreferrer"
-                        className="block text-sm text-blue-600 underline decoration-blue-400/60 underline-offset-2 transition hover:text-blue-700 dark:text-blue-400 dark:decoration-blue-300/50 dark:hover:text-blue-300"
+                        className="block rounded-xl text-blue-600 outline-none transition hover:text-blue-700 focus-visible:ring-2 focus-visible:ring-[var(--ring)]"
                       >
-                        <span className="font-medium">{link.label}</span>
-                        <span className="mx-2 text-[var(--text-muted)]">{'→'}</span>
-                        <span className="break-all text-blue-500">{link.url}</span>
+                        <span className="block text-sm font-semibold tracking-tight">
+                          {link.label}
+                        </span>
+                        <span className="mt-1.5 block break-all text-xs leading-5 underline decoration-current underline-offset-2 opacity-90 sm:text-[13px] text-blue-400 hover:text-blue-300">
+                          {link.url}
+                        </span>
                       </a>
                     </li>
                   ))}
@@ -290,9 +380,14 @@ function DirectoryPage() {
             >
               View Source
             </a>
-            <a href="/admin" className="inline-flex items-center justify-center transition hover:text-[var(--app-text)]">
-              Admin
-            </a>
+            {supportsAdminPanel ? (
+              <a
+                href="/admin"
+                className="inline-flex items-center justify-center transition hover:text-[var(--app-text)]"
+              >
+                Admin
+              </a>
+            ) : null}
           </div>
           <p className="mt-2">Made with love ❤️</p>
         </footer>

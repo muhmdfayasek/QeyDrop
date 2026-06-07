@@ -2,7 +2,7 @@
 
 <img src="public/favicon.svg" alt="QeyDrop Logo" width="80" height="80" />
 
-QeyDrop is a lightweight keyword-based link directory built for collecting, searching, and opening curated links from one clean interface. It uses a React frontend with Supabase as the backend, making it easy to browse the latest collections or search for a specific keyword instantly.
+QeyDrop is a lightweight keyword-based link directory built for collecting, searching, and opening curated links from one clean interface. It uses one React frontend with two interchangeable data source versions: Supabase Version and Static JSON Version.
 
 This project was created using the AI coding agent Codex.
 
@@ -11,14 +11,14 @@ This project was created using the AI coding agent Codex.
 - Browse the 10 latest keyword collections
 - Search collections with fast partial keyword matching
 - Open grouped links from a simple single-page UI
-- Use a read-only Supabase setup protected by Row Level Security
+- Choose between a read-only Supabase setup or a static JSON file
 
 ## Tech Stack
 
 - React
 - Vite
 - Tailwind CSS
-- Supabase
+- Supabase or static JSON
 - Vercel Analytics
 
 ## Getting Started
@@ -29,18 +29,91 @@ This project was created using the AI coding agent Codex.
 pnpm install
 ```
 
-2. Create a `.env` file and add your Supabase credentials:
+2. Choose a data source in `src/data/activeDataSource.js`.
+
+3. If you are using Supabase Version, create a `.env` file and add your Supabase credentials:
 
 ```bash
 VITE_SUPABASE_URL=...
 VITE_SUPABASE_ANON_KEY=...
 ```
 
-3. Start the development server:
+4. Start the development server:
 
 ```bash
 pnpm dev
 ```
+
+## Choosing a Data Source
+
+QeyDrop always imports data access from `src/data/activeDataSource.js`. To switch versions, edit that file manually and export one adapter.
+
+### Static JSON Version
+
+1. Edit `src/data/activeDataSource.js`
+2. Use `export * from "./jsonDataSource";`
+3. Edit `public/data/links.json`
+4. Deploy
+
+Static JSON Version supports the public directory UI only. The `/admin` route shows this message instead of the admin panel:
+
+`Static JSON Version does not support the admin panel. Edit public/data/links.json instead.`
+
+### Supabase Version
+
+1. Edit `src/data/activeDataSource.js`
+2. Use `export * from "./supabaseDataSource";`
+3. Configure Supabase credentials
+4. Deploy
+
+## Optional Cleanup
+
+QeyDrop supports both the Supabase Version and the Static JSON Version in the same repository.
+
+After choosing your preferred version, you may remove unused files to keep the project clean.
+
+### Using the Static JSON Version
+
+You may delete:
+
+- `src/data/supabaseDataSource.js`
+- `src/lib/supabase.js`
+- Admin page components and related authentication files
+- Unused Supabase dependencies
+- Supabase environment variables
+
+Keep:
+
+- `src/data/jsonDataSource.js`
+- `src/data/activeDataSource.js`
+- `public/data/links.json`
+
+### Using the Supabase Version
+
+You may delete:
+
+- `src/data/jsonDataSource.js`
+- `public/data/links.json`
+
+Keep:
+
+- `src/data/supabaseDataSource.js`
+- `src/data/activeDataSource.js`
+- `src/lib/supabase.js`
+
+### Important
+
+Do not delete:
+
+- `src/data/activeDataSource.js`
+
+This file acts as the application's data source adapter and should always remain in the project.
+
+Cleanup is completely optional.
+
+QeyDrop works correctly without deleting any files. Both versions are included intentionally so users can easily switch between the Supabase Version and the Static JSON Version.
+
+Before deleting any files, ensure the application is working correctly with your selected version.
 
 ## Database Setup
 
@@ -78,6 +151,8 @@ select public.configure_admin_account('admin@example.com');
 Example CSV files are available in [test-data/collections.csv](test-data/collections.csv) and [test-data/links.csv](test-data/links.csv).
 
 Import `collections.csv` first if you want starter records. The `links.csv` file is keyword-oriented for readability, so it works best as a reference when preparing inserts for the `links` table.
+
+If you are using Static JSON Version, edit [public/data/links.json](public/data/links.json) instead.
 
 ## Build
 

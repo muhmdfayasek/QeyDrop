@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useState } from 'react'
 import { FaEye, FaEyeSlash } from 'react-icons/fa6'
 import {
+  ADMIN_PANEL_UNAVAILABLE_MESSAGE,
   deleteCollection,
   fetchAdminCollections,
   getCurrentSession,
@@ -9,7 +10,8 @@ import {
   saveCollection,
   signInAsAdmin,
   signOutAdmin,
-} from '../lib/supabase'
+  supportsAdminPanel,
+} from '../data/activeDataSource'
 
 const createEmptyLink = () => ({ label: '', url: '' })
 
@@ -137,6 +139,11 @@ function AdminPage() {
   })
 
   useEffect(() => {
+    if (!supportsAdminPanel) {
+      setAuthReady(true)
+      return undefined
+    }
+
     let isActive = true
 
     const bootstrap = async () => {
@@ -407,7 +414,11 @@ function AdminPage() {
         <div>
           <p className="text-sm font-semibold tracking-tight">QeyDrop Admin</p>
           <p className="text-xs text-[var(--text-muted)]">
-            {isAdmin ? 'Content management' : 'Private access only'}
+            {!supportsAdminPanel
+              ? 'Unavailable in Static JSON Version'
+              : isAdmin
+                ? 'Content management'
+                : 'Private access only'}
           </p>
         </div>
         {isAdmin ? (
@@ -429,13 +440,22 @@ function AdminPage() {
       <div className="mx-auto w-full max-w-6xl px-4 py-5 sm:px-6 sm:py-6 lg:px-8">
         {renderTopBar}
 
-        {!authReady ? (
+        {!supportsAdminPanel ? (
+          <section className="mx-auto mt-8 w-full max-w-2xl rounded-2xl border border-[var(--border-soft)] bg-[var(--surface)] p-5 shadow-glow sm:p-6">
+            <h1 className="text-lg font-semibold tracking-tight">Admin unavailable</h1>
+            <p className="mt-2 text-sm text-[var(--text-muted)]">
+              {ADMIN_PANEL_UNAVAILABLE_MESSAGE}
+            </p>
+          </section>
+        ) : null}
+
+        {supportsAdminPanel && !authReady ? (
           <section className="mt-4 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface)] px-4 py-5 text-sm text-[var(--text-muted)] shadow-glow">
             Checking access...
           </section>
         ) : null}
 
-        {authReady && !isAdmin ? (
+        {supportsAdminPanel && authReady && !isAdmin ? (
           <section className="mx-auto mt-8 w-full max-w-sm rounded-2xl border border-[var(--border-soft)] bg-[var(--surface)] p-5 shadow-glow sm:p-6">
             <h1 className="text-lg font-semibold tracking-tight">QeyDrop Admin</h1>
             <p className="mt-1 text-xs text-[var(--text-muted)]">Private access only</p>
@@ -497,7 +517,7 @@ function AdminPage() {
           </section>
         ) : null}
 
-        {authReady && isAdmin ? (
+        {supportsAdminPanel && authReady && isAdmin ? (
           <section className="mt-4 grid gap-4 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
             <form
               onSubmit={handleSave}
